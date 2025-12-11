@@ -1,3 +1,2 @@
-export const mutix = () => {
-  return 'Hello Mutix'
-}
+export { createMutix } from './vanilla'
+export type { MutixStore } from './vanilla'
