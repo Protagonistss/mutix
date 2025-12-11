@@ -1,2 +1,2 @@
-export { createMutix } from './vanilla'
-export type { MutixStore } from './vanilla'
+export { createStore } from './store'
+export type { Store } from './store'
