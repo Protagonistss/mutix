@@ -37,10 +37,7 @@ export function createStoreWithPlugins<T extends object>(
     }
   }
 
-  const callPlugins = <K extends keyof Plugin<T>>(
-    hook: K,
-    ...args: Parameters<NonNullable<Plugin<T>[K]>>
-  ) => {
+  const callPlugins = (hook: keyof Plugin<T>, ...args: any[]) => {
     for (const plugin of plugins) {
       const fn = plugin[hook] as any
       if (typeof fn === 'function') {
@@ -131,6 +128,7 @@ export function createStoreWithPlugins<T extends object>(
     subscribeSelector: core.subscribeSelector,
     getSnapshot: core.getSnapshot,
     getReadonlySnapshot: core.getReadonlySnapshot,
+    withWriteSource: core.withWriteSource,
     dispatch,
     applyPatch,
     use
