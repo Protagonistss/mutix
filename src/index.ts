@@ -1,5 +1,5 @@
-export { createStore } from './store'
-export type { Store } from './store'
+export { createStore, createCoreStore } from './store'
+export type { Store, CoreStore, BaseStore } from './types'
 export * from './types'
 export {
   ContextManager,

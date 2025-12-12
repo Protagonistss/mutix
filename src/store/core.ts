@@ -1,24 +1,14 @@
-import { deleteByPath, setByPath, toSelector } from './context/paths'
+import { toSelector } from '../context/paths'
 import {
-  Action,
   CoreStore,
-  Patch,
-  PatchOp,
-  Plugin,
-  PluginContext,
+  CoreStoreOptions,
   Selector,
   SelectorOptions,
-  StoreOptions,
   WriteInfo
-} from './types'
+} from '../types'
 
 const isObject = (val: unknown): val is object =>
   typeof val === 'object' && val !== null
-
-const defaultScheduler = (fn: () => void) => {
-  if (typeof queueMicrotask === 'function') return queueMicrotask(fn)
-  return setTimeout(fn, 0) as unknown as void
-}
 
 const cloneDeep = (input: any): any => {
   if (!isObject(input)) return input
@@ -49,57 +39,25 @@ type SelectorListener<T, S> = {
   throttled?: boolean
 }
 
-export type Store<T extends object> = CoreStore<T>
-
-export function createStore<T extends object>(
+export function createCoreStore<T extends object>(
   initialState: T,
-  options: StoreOptions<T> = {}
+  options: CoreStoreOptions<T> = {}
 ): CoreStore<T> {
   let state = initialState
   const proxyCache = new WeakMap<object, any>()
   const listeners = new Set<() => void>()
   const selectorListeners: Array<SelectorListener<T, any>> = []
-  const plugins = new Set<Plugin<T>>()
-  const scheduler = options.scheduler ?? defaultScheduler
-  const dispatchHandler = options.dispatchHandler
+  const hooks = options.hooks ?? {}
   let batchDepth = 0
   let pendingNotify = false
-
-  let storeRef: CoreStore<T>
-
-  const pluginCtx: PluginContext<T> = {
-    getSnapshot: () => state,
-    dispatch: (action: Action) => storeRef.dispatch(action),
-    applyPatch: (patch: Patch) => storeRef.applyPatch(patch),
-    schedule: scheduler,
-    // @ts-expect-error - filled after storeRef created
-    store: undefined
-  }
+  let writeSource: WriteInfo['source'] = 'proxy'
 
   const handleError = (err: unknown) => {
-    for (const plugin of plugins) {
-      if (plugin.onError) {
-        try {
-          plugin.onError(pluginCtx, err)
-        } catch {
-          /* ignore secondary errors */
-        }
-      }
-    }
-  }
-
-  const callPlugins = <K extends keyof Plugin<T>>(
-    hook: K,
-    ...args: Parameters<NonNullable<Plugin<T>[K]>>
-  ) => {
-    for (const plugin of plugins) {
-      const fn = plugin[hook] as any
-      if (typeof fn === 'function') {
-        try {
-          fn(pluginCtx, ...args)
-        } catch (err) {
-          handleError(err)
-        }
+    if (hooks.onError) {
+      try {
+        hooks.onError(err)
+      } catch {
+        /* ignore secondary errors */
       }
     }
   }
@@ -162,7 +120,7 @@ export function createStore<T extends object>(
   }
 
   const notify = () => {
-    callPlugins('onNotifyStart')
+    hooks.onNotifyStart?.()
     notifySelectors()
     for (const listener of [...listeners]) {
       try {
@@ -171,12 +129,24 @@ export function createStore<T extends object>(
         handleError(err)
       }
     }
-    callPlugins('onNotifyEnd')
+    hooks.onNotifyEnd?.()
   }
 
   const recordWrite = (info: WriteInfo) => {
-    callPlugins('onBeforeWrite', info)
-    callPlugins('onAfterWrite', info)
+    if (hooks.onBeforeWrite) {
+      try {
+        hooks.onBeforeWrite(info)
+      } catch (err) {
+        handleError(err)
+      }
+    }
+    if (hooks.onAfterWrite) {
+      try {
+        hooks.onAfterWrite(info)
+      } catch (err) {
+        handleError(err)
+      }
+    }
     queueNotify()
   }
 
@@ -196,7 +166,7 @@ export function createStore<T extends object>(
       set(t, prop, value, receiver) {
         const key = String(prop)
         const prev = Reflect.get(t, prop, receiver)
-        const info: WriteInfo = { path: path.concat(key), prev, next: value, source: 'proxy' }
+        const info: WriteInfo = { path: path.concat(key), prev, next: value, source: writeSource }
         const res = Reflect.set(t, prop, value, receiver)
         recordWrite({ ...info, next: Reflect.get(t, prop, receiver) })
         return res
@@ -204,7 +174,7 @@ export function createStore<T extends object>(
       deleteProperty(t, prop) {
         const key = String(prop)
         const prev = Reflect.get(t, prop)
-        const info: WriteInfo = { path: path.concat(key), prev, next: undefined, source: 'proxy' }
+        const info: WriteInfo = { path: path.concat(key), prev, next: undefined, source: writeSource }
         const res = Reflect.deleteProperty(t, prop)
         recordWrite(info)
         return res
@@ -217,15 +187,6 @@ export function createStore<T extends object>(
 
   const proxyState = createProxy(state, []) as T
 
-  const applyPatchOp = (op: PatchOp) => {
-    callPlugins('onPatch', op)
-    if (op.op === 'set') {
-      setByPath(proxyState, op.path, op.value)
-    } else if (op.op === 'delete') {
-      deleteByPath(proxyState, op.path)
-    }
-  }
-
   const batch = (fn: () => void) => {
     batchDepth++
     try {
@@ -237,29 +198,6 @@ export function createStore<T extends object>(
         notify()
       }
     }
-  }
-
-  const dispatch = (action: Action) => {
-    callPlugins('onAction', action)
-    if (dispatchHandler) {
-      batch(() => {
-        try {
-          dispatchHandler(proxyState, action, pluginCtx)
-        } catch (err) {
-          handleError(err)
-        }
-      })
-    }
-  }
-
-  const applyPatch = (patch: Patch) => {
-    batch(() => {
-      if (Array.isArray(patch)) {
-        for (const op of patch) applyPatchOp(op)
-      } else {
-        applyPatchOp(patch)
-      }
-    })
   }
 
   const subscribe = (listener: () => void) => {
@@ -279,7 +217,6 @@ export function createStore<T extends object>(
       initial = selectorFn(state)
     } catch (err) {
       handleError(err)
-      // best effort: still register with undefined to keep consistent length
       initial = undefined as unknown as S
     }
     const item: SelectorListener<T, S> = {
@@ -305,19 +242,17 @@ export function createStore<T extends object>(
     return freeze ? freezeDeep(clone) : clone
   }
 
-  const use = (plugin: Plugin<T>) => {
-    plugins.add(plugin)
+  const withWriteSource = (source: WriteInfo['source'], fn: () => void) => {
+    const prev = writeSource
+    writeSource = source
     try {
-      plugin.onInit?.(pluginCtx)
-    } catch (err) {
-      handleError(err)
-    }
-    return () => {
-      plugins.delete(plugin)
+      fn()
+    } finally {
+      writeSource = prev
     }
   }
 
-  storeRef = {
+  return {
     state: proxyState,
     get snapshot() {
       return state
@@ -327,18 +262,6 @@ export function createStore<T extends object>(
     subscribeSelector,
     getSnapshot,
     getReadonlySnapshot,
-    dispatch,
-    applyPatch,
-    use
+    withWriteSource
   }
-
-  pluginCtx.store = storeRef
-
-  if (options.plugins?.length) {
-    for (const p of options.plugins) {
-      use(p)
-    }
-  }
-
-  return storeRef
 }

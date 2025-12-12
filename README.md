@@ -77,7 +77,9 @@ const unsub = subscribeValue(compId, 'state.visible', (v) => console.log('visibl
 - Logger：`attachLogger(store, logFn?)`，订阅变更并输出 `{ type: 'change', snapshot, time }`。
 
 ## 目录结构
-- `src/store.ts`：核心 Store（Proxy、Batch、Selector）。
+- `src/store/core.ts`：纯内核 Store（Proxy、Batch、Selector、只读快照）。
+- `src/store/extensions.ts`：增强层（插件管线、dispatch、applyPatch）。
+- `src/store/index.ts`：Store 出口，默认导出增强版，同时导出 `createCoreStore`。
 - `src/context/`：上下文管理（路径工具与作用域管理）。
 - `src/plugins/`：插件示例（Logger）。
 - `__tests__/`：核心、扩展、上下文测试。

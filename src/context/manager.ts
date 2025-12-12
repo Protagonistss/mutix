@@ -1,4 +1,5 @@
-import { createStore, type Store } from '../store'
+import { createCoreStore } from '../store/core'
+import type { BaseStore } from '../types'
 import { getByPath, setByPath, toSelector, hasPath, deleteByPath } from './paths'
 
 type ScopeId = string
@@ -19,7 +20,7 @@ export interface SubscribeOptions {
 }
 
 export class ContextManager {
-  private contexts = new Map<ScopeId, Store<Record<string, any>>>()
+  private contexts = new Map<ScopeId, BaseStore<Record<string, any>>>()
   private parents = new Map<ScopeId, ScopeId>()
   private writePolicy: WritePolicy
   private fallbackOnUndefined: boolean
@@ -34,7 +35,7 @@ export class ContextManager {
     initial: Record<string, any> = {},
     parentScopeId?: ScopeId
   ) {
-    const store = createStore<Record<string, any>>(initial)
+    const store = createCoreStore<Record<string, any>>(initial)
     this.contexts.set(scopeId, store)
     if (parentScopeId) this.parents.set(scopeId, parentScopeId)
     return store

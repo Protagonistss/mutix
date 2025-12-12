@@ -18,15 +18,17 @@ export interface SelectorOptions {
   throttleMs?: number
 }
 
+export type WriteSource = 'proxy' | 'patch' | 'dispatch'
+
 export interface WriteInfo {
   path?: string[]
   prev: any
   next: any
-  source: 'proxy' | 'patch' | 'dispatch'
+  source: WriteSource
 }
 
 export interface PluginContext<T extends object> {
-  store: CoreStore<T>
+  store: Store<T>
   getSnapshot(): T
   dispatch(action: Action): void
   applyPatch(patch: Patch): void
@@ -45,13 +47,21 @@ export interface Plugin<T extends object> {
   onError?(ctx: PluginContext<T>, error: unknown): void
 }
 
+export interface StoreHooks<T extends object> {
+  onBeforeWrite?(info: WriteInfo): void
+  onAfterWrite?(info: WriteInfo): void
+  onNotifyStart?(): void
+  onNotifyEnd?(): void
+  onError?(error: unknown): void
+}
+
 export interface StoreOptions<T extends object> {
   plugins?: Plugin<T>[]
   scheduler?: (fn: () => void) => void
   dispatchHandler?: (state: T, action: Action, ctx: PluginContext<T>) => void
 }
 
-export interface CoreStore<T extends object> {
+export interface BaseStore<T extends object> {
   state: T
   readonly snapshot: T
   subscribe: (listener: () => void) => () => void
@@ -64,7 +74,18 @@ export interface CoreStore<T extends object> {
   ) => () => void
   getSnapshot: () => T
   getReadonlySnapshot: (options?: { freeze?: boolean; shallow?: boolean }) => T
+  withWriteSource: (source: WriteSource, fn: () => void) => void
+}
+
+export type CoreStore<T extends object> = BaseStore<T>
+
+export interface Store<T extends object> extends BaseStore<T> {
   dispatch: (action: Action) => void
   applyPatch: (patch: Patch) => void
   use: (plugin: Plugin<T>) => () => void
+}
+
+export interface CoreStoreOptions<T extends object> {
+  scheduler?: (fn: () => void) => void
+  hooks?: StoreHooks<T>
 }

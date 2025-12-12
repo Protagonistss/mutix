@@ -1,5 +1,4 @@
-import type { Plugin } from '../types'
-import type { Store } from '../store'
+import type { Plugin, Store } from '../types'
 
 export type LogFn = (msg: { type: 'change'; snapshot: any; time: number }) => void
 
