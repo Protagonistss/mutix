@@ -1,64 +1,83 @@
 import { createStore, ContextManager, createLowCodeAdapter } from 'mutix'
 
-// Existing simple store
-export interface AppState {
-  count: number
-  user: {
-    name: string
-  }
-}
-
-export const store = createStore<AppState>({
-  count: 0,
-  user: {
-    name: 'Vue 2 User'
-  }
-})
-
-export const increment = () => {
-  store.state.count++
-}
-
-export const updateName = (name: string) => {
-  store.state.user.name = name
-}
-
-// --- LowCode 3-Layer Demo Setup ---
-
+// --- Global Managers ---
 export const manager = new ContextManager()
 
-// 1. App Layer (Root)
-// Contains global config and user info
-manager.createContext('app', {
-  theme: 'dark',
-  user: 'Admin',
-  config: {
-    env: 'production',
-    version: '1.0.0'
+// --- Mock API Data ---
+const mockUsers = [
+  { id: 1, name: 'John Brown', age: 32, address: 'New York No. 1 Lake Park' },
+  { id: 2, name: 'Jim Green', age: 42, address: 'London No. 1 Lake Park' },
+  { id: 3, name: 'Joe Black', age: 32, address: 'Sidney No. 1 Lake Park' }
+]
+
+// --- 1. Page Scope: User List ---
+// Represents the list page context
+const PAGE_ID = 'page-user-list'
+
+manager.createContext(PAGE_ID, {
+  listData: [...mockUsers],
+  loading: false,
+  total: 3
+})
+
+export const pageAdapter = createLowCodeAdapter(manager, PAGE_ID, {
+  externals: {
+    // Expose API capability to the context
+    fetchList: () => {
+      pageAdapter.setValue('loading', true)
+      setTimeout(() => {
+        // Reset to initial mock data for demo purposes
+        // In real app, this would fetch from server
+        pageAdapter.setValue('listData', [...mockUsers])
+        pageAdapter.setValue('loading', false)
+      }, 500)
+    },
+    // Action to handle edit click
+    handleEdit: (record: any) => {
+      // Initialize modal scope with record data
+      modalAdapter.setValue('formData', { ...record })
+      modalAdapter.setValue('visible', true)
+      modalAdapter.setValue('title', `Edit User: ${record.name}`)
+    }
   }
 })
 
-// 2. Page Layer (Child of App)
-// Contains page-specific title and status
-manager.createContext('page-1', {
-  title: 'Dashboard',
-  status: 'active',
-  // Inherits 'theme', 'user', 'config' from app
-}, 'app')
+// --- 2. Modal Scope: User Edit ---
+// Represents the modal context, inherits from Page
+const MODAL_ID = 'modal-user-edit'
 
-// 3. Component Layer (Child of Page)
-// Contains local state, and shadows 'theme'
-manager.createContext('comp-1', {
-  theme: 'light', // Shadows app theme
-  counter: 0,
-  localName: 'Widget A'
-}, 'page-1')
+manager.createContext(MODAL_ID, {
+  visible: false,
+  title: 'Edit User',
+  formData: { id: 0, name: '', age: 0, address: '' },
+  saving: false
+}, PAGE_ID)
 
-// Create adapters for UI interaction
-export const appAdapter = createLowCodeAdapter(manager, 'app')
-export const pageAdapter = createLowCodeAdapter(manager, 'page-1')
-export const compAdapter = createLowCodeAdapter(manager, 'comp-1', {
+export const modalAdapter = createLowCodeAdapter(manager, MODAL_ID, {
   externals: {
-    toUpper: (s: string) => s?.toUpperCase() || ''
+    // Action to submit form
+    submitForm: () => {
+      const data = modalAdapter.getValue('formData')
+      modalAdapter.setValue('saving', true)
+      
+      setTimeout(() => {
+        console.log('Saving data:', data)
+        // Update mock data locally
+        const idx = mockUsers.findIndex(u => u.id === data.id)
+        if (idx > -1) mockUsers[idx] = data
+        
+        modalAdapter.setValue('saving', false)
+        modalAdapter.setValue('visible', false)
+        
+        // Refresh parent list
+        // Note: In lowcode, this might be `ctx.parent.eval('fetchList()')`
+        pageAdapter.eval('fetchList()')
+        
+      }, 1000)
+    },
+    // Action to cancel
+    cancel: () => {
+      modalAdapter.setValue('visible', false)
+    }
   }
 })

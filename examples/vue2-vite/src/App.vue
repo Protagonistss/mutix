@@ -1,183 +1,112 @@
 <template>
   <div class="app">
-    <h1>Mutix + Vue 2 Example</h1>
+    <h1>LowCode CRUD Example</h1>
     
-    <!-- Original Store Demo -->
-    <div class="card">
-      <h3>Standard Store</h3>
-      <p>Count is: {{ count }}</p>
-      <button @click="inc">Increment</button>
-      <div style="margin-top: 10px">
-        <label>User: </label>
-        <input :value="name" @input="onInput" />
+    <!-- Page Scope: List -->
+    <a-card title="User List (Page Scope)" class="scope-card page-scope">
+      <div slot="extra">
+        <a-button type="primary" :loading="pageState.loading" @click="refreshList">
+          Refresh List
+        </a-button>
       </div>
-    </div>
 
-    <!-- LowCode 3-Layer Demo -->
-    <div class="lowcode-demo">
-      <h2>LowCode Scope Hierarchy</h2>
+      <a-table 
+        :columns="columns" 
+        :data-source="pageState.listData" 
+        :loading="pageState.loading"
+        row-key="id"
+        bordered
+      >
+        <template slot="action" slot-scope="text, record">
+          <a @click="handleEdit(record)">Edit</a>
+        </template>
+      </a-table>
+    </a-card>
+
+    <!-- Modal Scope: Edit Form -->
+    <a-modal
+      :visible="modalState.visible"
+      :title="modalState.title"
+      @cancel="handleCancel"
+      @ok="handleSubmit"
+      :confirmLoading="modalState.saving"
+    >
+      <a-form-model :model="modalState.formData" :label-col="{ span: 5 }" :wrapper-col="{ span: 16 }">
+        <a-form-model-item label="Name">
+          <a-input v-model="modalState.formData.name" />
+        </a-form-model-item>
+        <a-form-model-item label="Age">
+          <a-input-number v-model="modalState.formData.age" />
+        </a-form-model-item>
+        <a-form-model-item label="Address">
+          <a-textarea v-model="modalState.formData.address" />
+        </a-form-model-item>
+      </a-form-model>
       
-      <!-- App Layer -->
-      <div class="layer-card app-layer">
-        <div class="layer-header">
-          <span class="badge">App Scope</span>
-          <span class="info">Theme: {{ appData.theme }} (Dark)</span>
-        </div>
-        <div class="control-group">
-          <label>Global User:</label>
-          <input :value="appData.user" @input="e => updateAppUser(e.target.value)" />
-        </div>
+      <div class="debug-info">
+        <small>Current Scope ID: modal-user-edit (Parent: page-user-list)</small>
       </div>
-
-      <!-- Page Layer -->
-      <div class="layer-card page-layer">
-        <div class="layer-header">
-          <span class="badge">Page Scope (Inherits App)</span>
-          <span class="info">Parent: App</span>
-        </div>
-        <div class="control-group">
-          <label>Page Title:</label>
-          <input :value="pageData.title" @input="e => updatePageTitle(e.target.value)" />
-        </div>
-      </div>
-
-      <!-- Component Layer -->
-      <div class="layer-card comp-layer">
-        <div class="layer-header">
-          <span class="badge">Component Scope</span>
-          <span class="info">Theme: {{ compData.theme }} (Shadows App)</span>
-        </div>
-        
-        <div class="eval-box">
-          <h4>Dynamic Expression Evaluator</h4>
-          <p class="hint">Try accessing: user, title, theme, toUpper(user)</p>
-          <textarea v-model="expression" placeholder="Enter expression..."></textarea>
-          
-          <div class="result-display">
-            <strong>Result: </strong>
-            <span :class="{ error: isError }">{{ evalResult }}</span>
-          </div>
-        </div>
-
-        <div class="data-preview">
-          <h4>Resolved Data (Inheritance Check)</h4>
-          <ul>
-            <li><strong>user (from App):</strong> {{ compResolved.user }}</li>
-            <li><strong>title (from Page):</strong> {{ compResolved.title }}</li>
-            <li><strong>theme (Shadowed):</strong> {{ compResolved.theme }}</li>
-          </ul>
-        </div>
-      </div>
-    </div>
+    </a-modal>
   </div>
 </template>
 
 <script lang="ts">
 import Vue from 'vue'
-import { 
-  store, increment, updateName, 
-  appAdapter, pageAdapter, compAdapter 
-} from './store'
+import { pageAdapter, modalAdapter } from './store'
+
+const columns = [
+  { title: 'ID', dataIndex: 'id', width: 80 },
+  { title: 'Name', dataIndex: 'name' },
+  { title: 'Age', dataIndex: 'age' },
+  { title: 'Address', dataIndex: 'address' },
+  { title: 'Action', scopedSlots: { customRender: 'action' } },
+]
 
 export default Vue.extend({
   data() {
     return {
-      // Standard store
-      count: store.state.count,
-      name: store.state.user.name,
+      columns,
+      // Reactive state from adapters
+      pageState: pageAdapter.getSnapshot(),
+      modalState: modalAdapter.getSnapshot(),
       
-      // LowCode state
-      appData: appAdapter.getSnapshot(),
-      pageData: pageAdapter.getSnapshot(),
-      compData: compAdapter.getSnapshot(),
-      
-      // Resolved values from component perspective
-      compResolved: {
-        user: compAdapter.getValue('user'),
-        title: compAdapter.getValue('title'),
-        theme: compAdapter.getValue('theme')
-      },
-      
-      // Expression playground
-      expression: "toUpper(user) + ' is viewing ' + title + ' (' + theme + ')'",
-      evalResult: '',
-      isError: false,
-      
-      unsubscribers: [] as Array<() => void>
+      unsubs: [] as Array<() => void>
     }
   },
   mounted() {
-    // Standard store sub
-    this.unsubscribers.push(store.subscribe(() => {
-      this.count = store.state.count
-      this.name = store.state.user.name
+    // 1. Subscribe to Page Context
+    this.unsubs.push(pageAdapter.subscribe(() => {
+      this.pageState = { ...pageAdapter.getSnapshot() }
+    }))
+    
+    // 2. Subscribe to Modal Context
+    this.unsubs.push(modalAdapter.subscribe(() => {
+      this.modalState = { ...modalAdapter.getSnapshot() }
     }))
 
-    // App Layer sub
-    this.unsubscribers.push(appAdapter.subscribe(() => {
-      this.appData = { ...appAdapter.getSnapshot() }
-      this.refreshCompResolved()
-    }))
-
-    // Page Layer sub
-    this.unsubscribers.push(pageAdapter.subscribe(() => {
-      this.pageData = { ...pageAdapter.getSnapshot() }
-      this.refreshCompResolved()
-    }))
-
-    // Component Layer sub
-    this.unsubscribers.push(compAdapter.subscribe(() => {
-      this.compData = { ...compAdapter.getSnapshot() }
-      this.refreshCompResolved()
-    }))
-
-    // Initial eval
-    this.runEval()
-  },
-  watch: {
-    expression: 'runEval',
-    // Re-run eval when any data changes
-    compResolved: {
-      deep: true,
-      handler: 'runEval'
-    }
+    // Initial load
+    this.refreshList()
   },
   beforeDestroy() {
-    this.unsubscribers.forEach(u => u())
+    this.unsubs.forEach(u => u())
   },
   methods: {
-    inc() {
-      increment()
+    refreshList() {
+      // Trigger action via lowcode evaluation
+      pageAdapter.eval('fetchList()')
     },
-    onInput(e: Event) {
-      const target = e.target as HTMLInputElement
-      updateName(target.value)
+    handleEdit(record: any) {
+      // Pass data to modal context
+      pageAdapter.eval('handleEdit(record)', { record })
     },
-    
-    // LowCode Updates
-    updateAppUser(val: string) {
-      appAdapter.setValue('user', val)
+    handleCancel() {
+      modalAdapter.eval('cancel()')
     },
-    updatePageTitle(val: string) {
-      pageAdapter.setValue('title', val)
-    },
-    
-    refreshCompResolved() {
-      this.compResolved = {
-        user: compAdapter.getValue('user'),
-        title: compAdapter.getValue('title'),
-        theme: compAdapter.getValue('theme')
-      }
-    },
-    
-    runEval() {
-      try {
-        this.isError = false
-        this.evalResult = compAdapter.eval(this.expression)
-      } catch (e) {
-        this.isError = true
-        this.evalResult = 'Error: ' + (e as Error).message
-      }
+    handleSubmit() {
+      // Sync v-model changes back to store before submitting
+      // (Since v-model mutates the local snapshot clone)
+      modalAdapter.setValue('formData', this.modalState.formData)
+      modalAdapter.eval('submitForm()')
     }
   }
 })
@@ -185,97 +114,26 @@ export default Vue.extend({
 
 <style scoped>
 .app {
-  font-family: 'Segoe UI', sans-serif;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
-  color: #333;
+  padding: 24px;
+  background: #f0f2f5;
+  min-height: 100vh;
 }
 
-.card {
-  border: 1px solid #ddd;
-  padding: 1rem;
-  margin-bottom: 2rem;
-  border-radius: 8px;
-  background: #f9f9f9;
-}
-
-.lowcode-demo {
-  border-top: 2px solid #eee;
-  padding-top: 1rem;
-}
-
-.layer-card {
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.app-layer { background: #e3f2fd; border-color: #bbdefb; }
-.page-layer { background: #e8f5e9; border-color: #c8e6c9; margin-left: 20px; }
-.comp-layer { background: #fff3e0; border-color: #ffe0b2; margin-left: 40px; }
-
-.layer-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.badge {
-  font-weight: bold;
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  background: rgba(0,0,0,0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.control-group {
-  margin-top: 0.5rem;
-}
-
-.control-group label {
-  display: inline-block;
-  width: 80px;
-  font-weight: 500;
-}
-
-.eval-box {
+.scope-card {
   background: #fff;
-  border: 1px solid #ffe0b2;
+  border-left: 5px solid #1890ff; /* Page Scope Color */
+}
+
+.debug-info {
+  margin-top: 20px;
   padding: 10px;
-  border-radius: 4px;
-  margin-top: 10px;
+  background: #fffbe6;
+  border: 1px dashed #ffe58f;
+  color: #d46b08;
 }
 
-textarea {
-  width: 100%;
-  height: 60px;
-  margin: 5px 0;
-  padding: 5px;
-  font-family: monospace;
-}
-
-.result-display {
-  background: #f5f5f5;
-  padding: 5px;
-  border-radius: 4px;
-  font-family: monospace;
-}
-
-.data-preview {
-  margin-top: 10px;
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.data-preview ul {
-  list-style: none;
-  padding: 0;
-  margin: 5px 0;
+/* AntDV Overrides */
+.ant-table-wrapper {
+  background: #fff;
 }
 </style>

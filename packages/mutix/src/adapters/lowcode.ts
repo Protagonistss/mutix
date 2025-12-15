@@ -2,9 +2,13 @@ import { ContextManager } from '../context/manager'
 import { createAdapter } from '../adapter/createAdapter'
 import type { Adapter } from '../adapter/types'
 
+// --- Types ---
+
+export type Evaluator = (expression: string, context: Record<string, any>) => any
+
 export interface LowCodeAdapterOptions {
   externals?: Record<string, any>
-  evaluator?: (expression: string, context: Record<string, any>) => any
+  evaluator?: Evaluator
   fallbackOnUndefined?: boolean
 }
 
@@ -15,6 +19,58 @@ export interface LowCodeExtensions {
 }
 
 export type LowCodeAdapter<T extends object = any> = Adapter<T> & LowCodeExtensions
+
+// --- Internal Helpers ---
+
+/**
+ * Creates a Proxy context that follows the lookup order:
+ * 1. Local context (additionalContext)
+ * 2. Externals
+ * 3. Store Scope Chain (via ContextManager)
+ */
+const createContextProxy = (
+  manager: ContextManager,
+  scopeId: string,
+  externals: Record<string, any>,
+  additionalContext: Record<string, any>
+) => {
+  return new Proxy({}, {
+    get: (_target, prop) => {
+      if (typeof prop === 'string') {
+        if (prop in additionalContext) return additionalContext[prop]
+        if (prop in externals) return externals[prop]
+        
+        const val = manager.getValue(scopeId, prop)
+        if (val !== undefined) return val
+      }
+      return undefined
+    },
+    has: (_target, prop) => {
+      if (typeof prop === 'string') {
+        if (prop in additionalContext) return true
+        if (prop in externals) return true
+        return manager.getValue(scopeId, prop) !== undefined
+      }
+      return false
+    }
+  })
+}
+
+/**
+ * Default sandbox implementation using 'new Function' + 'with'
+ */
+export const defaultEvaluator: Evaluator = (expression, context) => {
+  try {
+    // Using 'with' to emulate a scope where properties are variables
+    const fn = new Function('context', `with(context) { return ${expression} }`)
+    return fn(context)
+  } catch (e) {
+    console.warn(`[LowCodeAdapter] Expression evaluation failed: "${expression}"`, e)
+    return undefined
+  }
+}
+
+// --- Factory ---
 
 export const createLowCodeAdapter = <T extends object = any>(
   manager: ContextManager,
@@ -42,44 +98,12 @@ export const createLowCodeAdapter = <T extends object = any>(
   }
 
   const evalExpr = <R = any>(expression: string, additionalContext: Record<string, any> = {}): R => {
-    // Create a context proxy that looks up variables in this order:
-    // 1. additionalContext (local scope of expression)
-    // 2. externals (global injected tools/libs)
-    // 3. store (scope chain via ContextManager)
+    // 1. Build the context with strict lookup order
+    const proxyContext = createContextProxy(manager, scopeId, externals, additionalContext)
     
-    const proxyContext = new Proxy({}, {
-      get: (_target, prop) => {
-        if (typeof prop === 'string') {
-          if (prop in additionalContext) return additionalContext[prop]
-          if (prop in externals) return externals[prop]
-          
-          const val = manager.getValue(scopeId, prop)
-          if (val !== undefined) return val
-        }
-        return undefined
-      },
-      has: (_target, prop) => {
-        if (typeof prop === 'string') {
-          if (prop in additionalContext) return true
-          if (prop in externals) return true
-          return manager.getValue(scopeId, prop) !== undefined
-        }
-        return false
-      }
-    })
-
-    if (options.evaluator) {
-      return options.evaluator(expression, proxyContext)
-    }
-
-    // Default sandbox implementation
-    try {
-      const fn = new Function('context', `with(context) { return ${expression} }`)
-      return fn(proxyContext)
-    } catch (e) {
-      console.warn(`[LowCodeAdapter] Expression evaluation failed: "${expression}"`, e)
-      return undefined as any
-    }
+    // 2. Delegate execution to injected evaluator or default sandbox
+    const evaluator = options.evaluator || defaultEvaluator
+    return evaluator(expression, proxyContext)
   }
 
   const getDataSource = () => baseAdapter.getSnapshot()
