@@ -12,5 +12,9 @@ export {
   getStore
 } from './context/manager'
 export { attachLogger, loggerPlugin } from './plugins/logger'
-export { createAdapter } from './adapters'
-export type { Adapter, AdapterCapability, AdapterSelectOptions } from './adapters'
+
+// Core Adapter API (types & factory)
+export * from './adapter'
+
+// Built-in Adapters (implementations)
+export * from './adapters'

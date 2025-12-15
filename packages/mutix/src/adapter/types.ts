@@ -1,4 +1,6 @@
 import type { Action, Patch, Selector } from '../types'
+export type { Action, Patch, Selector }
+
 
 export type AdapterCapability = 'readonly' | 'scope' | 'patch' | 'dispatch'
 
