@@ -47,7 +47,7 @@ export interface Plugin<T extends object> {
   onError?(ctx: PluginContext<T>, error: unknown): void
 }
 
-export interface StoreHooks<T extends object> {
+export interface StoreHooks {
   onBeforeWrite?(info: WriteInfo): void
   onAfterWrite?(info: WriteInfo): void
   onNotifyStart?(): void
@@ -85,7 +85,7 @@ export interface Store<T extends object> extends BaseStore<T> {
   use: (plugin: Plugin<T>) => () => void
 }
 
-export interface CoreStoreOptions<T extends object> {
+export interface CoreStoreOptions {
   scheduler?: (fn: () => void) => void
-  hooks?: StoreHooks<T>
+  hooks?: StoreHooks
 }

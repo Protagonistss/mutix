@@ -41,7 +41,7 @@ type SelectorListener<T, S> = {
 
 export function createCoreStore<T extends object>(
   initialState: T,
-  options: CoreStoreOptions<T> = {}
+  options: CoreStoreOptions = {}
 ): CoreStore<T> {
   let state = initialState
   const proxyCache = new WeakMap<object, any>()

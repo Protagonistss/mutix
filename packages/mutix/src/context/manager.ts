@@ -1,6 +1,6 @@
 import { createCoreStore } from '../store/core'
 import type { BaseStore } from '../types'
-import { getByPath, setByPath, toSelector, hasPath, deleteByPath } from './paths'
+import { setByPath, toSelector, hasPath, deleteByPath } from './paths'
 
 type ScopeId = string
 
