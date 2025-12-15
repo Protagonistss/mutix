@@ -1,2 +1,2 @@
-export { createStoreWithPlugins as createStore } from './extensions'
-export { createCoreStore } from './core'
+export { createStoreWithPlugins as createStore } from './enhanced'
+export { createCoreStore } from './base'

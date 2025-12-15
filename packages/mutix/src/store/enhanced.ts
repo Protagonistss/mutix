@@ -1,5 +1,5 @@
 import { deleteByPath, setByPath } from '../context/paths'
-import { createCoreStore } from './core'
+import { createCoreStore } from './base'
 import {
   Action,
   Patch,

@@ -1,4 +1,4 @@
-import { createCoreStore } from '../store/core'
+import { createCoreStore } from '../store/base'
 import type { BaseStore } from '../types'
 import { setByPath, toSelector, hasPath, deleteByPath } from './paths'
 
