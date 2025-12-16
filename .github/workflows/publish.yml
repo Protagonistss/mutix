@@ -26,7 +26,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm -r run build
+        run: pnpm -F mutix build
 
       - name: Publish mutix
         run: pnpm publish --filter mutix --no-git-checks

@@ -31,7 +31,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: pnpm -r run test
+        run: pnpm -F mutix test
 
       - name: Build
-        run: pnpm -r run build
+        run: pnpm -F mutix build
