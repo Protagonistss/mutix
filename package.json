@@ -2,8 +2,8 @@
   "name": "mutix-monorepo",
   "private": true,
   "scripts": {
-    "build": "pnpm -r run build",
-    "test": "pnpm -r run test",
-    "dev": "pnpm -r run dev"
+    "build": "pnpm --filter mutix run build",
+    "test": "pnpm --filter mutix run test",
+    "dev": "pnpm --filter mutix run dev"
   }
 }
