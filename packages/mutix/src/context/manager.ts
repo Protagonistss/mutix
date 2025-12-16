@@ -2,7 +2,7 @@ import { createCoreStore } from '../store/base'
 import type { BaseStore } from '../types'
 import { setByPath, toSelector, hasPath, deleteByPath } from './paths'
 
-type ScopeId = string
+type ScopeId = string | symbol
 
 export type WritePolicy =
   | 'self'

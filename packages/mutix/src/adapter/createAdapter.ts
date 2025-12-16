@@ -35,7 +35,7 @@ const hasPatch = <T extends object>(store: BaseStore<T>): store is Store<T> =>
 export interface CreateAdapterOptions<T extends object> {
   store: BaseStore<T> | Store<T>
   manager?: ContextManager
-  scopeId?: string
+  scopeId?: string | symbol
   defaultEqualityFn?: <S>(a: S, b: S) => boolean
   defaultScheduler?: (fn: () => void) => void
 }
@@ -84,7 +84,7 @@ export const createAdapter = <T extends object>(
     })
   }
 
-  const withScope = (id: string): Adapter<T> =>
+  const withScope = (id: string | symbol): Adapter<T> =>
     createAdapter({
       store,
       manager,

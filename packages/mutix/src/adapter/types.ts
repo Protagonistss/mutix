@@ -24,7 +24,7 @@ export interface Adapter<T extends object> {
   dispatch?(action: Action): void
   applyPatch?(patch: Patch): void
   batch?(fn: () => void): void
-  withScope?(scopeId: string): Adapter<T>
+  withScope?(scopeId: string | symbol): Adapter<T>
   getValue?<S>(selector: Selector<T, S>): S
   setValue?(path: string, value: any): void
   deleteValue?(path: string): void

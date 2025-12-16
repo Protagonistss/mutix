@@ -29,7 +29,7 @@ export type LowCodeAdapter<T extends object = any> = Adapter<T> & LowCodeExtensi
  */
 const createContextProxy = (
   manager: ContextManager,
-  scopeId: string,
+  scopeId: string | symbol,
   externals: Record<string, any>,
   additionalContext: Record<string, any>
 ) => {
@@ -61,7 +61,7 @@ const createContextProxy = (
 
 export const createLowCodeAdapter = <T extends object = any>(
   manager: ContextManager,
-  scopeId: string,
+  scopeId: string | symbol,
   options: LowCodeAdapterOptions = {}
 ): LowCodeAdapter<T> => {
   const externals = options.externals || {}
@@ -102,7 +102,7 @@ export const createLowCodeAdapter = <T extends object = any>(
     eval: evalExpr,
     getDataSource,
     // Override withScope to return LowCodeAdapter instead of base Adapter
-    withScope: (newScopeId: string) => 
+    withScope: (newScopeId: string | symbol) => 
       createLowCodeAdapter(manager, newScopeId, options)
   }
 }

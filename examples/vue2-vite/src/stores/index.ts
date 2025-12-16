@@ -12,7 +12,7 @@ const mockUsers = [
 
 // --- 1. Page Scope: User List ---
 // Represents the list page context
-const PAGE_ID = 'page-user-list'
+const PAGE_ID = Symbol('page-user-list')
 
 manager.createContext(PAGE_ID, {
   listData: [...mockUsers],
@@ -44,7 +44,7 @@ export const pageAdapter = createLowCodeAdapter(manager, PAGE_ID, {
 
 // --- 2. Modal Scope: User Edit ---
 // Represents the modal context, inherits from Page
-const MODAL_ID = 'modal-user-edit'
+const MODAL_ID = Symbol('modal-user-edit')
 
 manager.createContext(MODAL_ID, {
   visible: false,
