@@ -1,10 +1,9 @@
 import { ContextManager } from '../context/manager'
 import { createAdapter } from '../adapter/createAdapter'
 import type { Adapter } from '../adapter/types'
+import { Evaluator, defaultEvaluator } from '../expression'
 
 // --- Types ---
-
-export type Evaluator = (expression: string, context: Record<string, any>) => any
 
 export interface LowCodeAdapterOptions {
   externals?: Record<string, any>
@@ -56,19 +55,7 @@ const createContextProxy = (
   })
 }
 
-/**
- * Default sandbox implementation using 'new Function' + 'with'
- */
-export const defaultEvaluator: Evaluator = (expression, context) => {
-  try {
-    // Using 'with' to emulate a scope where properties are variables
-    const fn = new Function('context', `with(context) { return ${expression} }`)
-    return fn(context)
-  } catch (e) {
-    console.warn(`[LowCodeAdapter] Expression evaluation failed: "${expression}"`, e)
-    return undefined
-  }
-}
+
 
 // --- Factory ---
 
