@@ -35,7 +35,7 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "Syncing version to $VERSION"
           cd packages/mutix
-          npm version $VERSION --no-git-tag-version
+          npm version $VERSION --no-git-tag-version --allow-same-version
 
       - name: Publish mutix
         run: pnpm publish --filter mutix --no-git-checks
