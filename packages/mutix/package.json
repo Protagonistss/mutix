@@ -28,7 +28,11 @@
     "typescript",
     "proxy"
   ],
-  "author": "",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "author": "huangshan",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/Protagonistss/mutix/issues"
