@@ -1,7 +1,7 @@
 import { createStore, ContextManager, createLowCodeAdapter } from 'mutix'
 
 // --- Global Managers ---
-export const manager = new ContextManager()
+export const manager = new ContextManager({ devtools: true })
 
 // --- Mock API Data ---
 const mockUsers = [
