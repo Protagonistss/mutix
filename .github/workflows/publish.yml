@@ -8,6 +8,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +30,19 @@ jobs:
       - name: Build
         run: pnpm -F mutix build
 
+      - name: Sync version from tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Syncing version to $VERSION"
+          cd packages/mutix
+          npm version $VERSION --no-git-tag-version --allow-same-version
+
       - name: Publish mutix
         run: pnpm publish --filter mutix --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true

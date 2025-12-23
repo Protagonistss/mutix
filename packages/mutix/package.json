@@ -1,6 +1,6 @@
 {
   "name": "mutix",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "A lightweight modern state management library",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -28,7 +28,11 @@
     "typescript",
     "proxy"
   ],
-  "author": "",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "author": "huangshan",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/Protagonistss/mutix/issues"
