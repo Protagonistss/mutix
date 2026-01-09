@@ -1,5 +1,7 @@
 # Mutix
 
+![npm version](https://img.shields.io/npm/v/mutix) ![license](https://img.shields.io/npm/l/mutix)
+
 A lightweight, high-performance state management library based on `Proxy`, designed for low-code, multi-platform, and complex transaction scenarios.
 
 ## Documentation
@@ -23,6 +25,7 @@ yarn add mutix
 - **Context Management**: Scope-based state isolation with inheritance support.
 - **LowCode Adapter**: Decouple business logic from state for maximum reusability.
 - **Plugin System**: Extensible architecture for logging, persistence, and devtools.
+- **DevTools Ready**: Built-in support for Redux DevTools with real-time state tracking and time travel.
 
 ## Quick Start
 
