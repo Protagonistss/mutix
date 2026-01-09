@@ -46,7 +46,12 @@ export class ContextManager {
     const plugins = [...this.plugins, ...(options.plugins ?? [])]
 
     if (this.devtools) {
-      plugins.push(devtoolsPlugin({ name: String(scopeId) }))
+      // 优化：优先使用 Symbol 的 description，否则使用 String 转换
+      const displayName = typeof scopeId === 'symbol' 
+        ? (scopeId.description || String(scopeId)) 
+        : String(scopeId)
+      
+      plugins.push(devtoolsPlugin({ name: displayName }))
     }
 
     const store = createStore<Record<string, any>>(initial, { plugins })
