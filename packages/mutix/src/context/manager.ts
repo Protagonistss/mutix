@@ -1,5 +1,6 @@
-import { createCoreStore } from '../store/base'
-import type { BaseStore } from '../types'
+import { createStoreWithPlugins as createStore } from '../store/enhanced'
+import type { BaseStore, Plugin } from '../types'
+import { devtoolsPlugin } from '../plugins/devtools'
 import { setByPath, toSelector, hasPath, deleteByPath } from './paths'
 
 type ScopeId = string | symbol
@@ -12,6 +13,8 @@ export type WritePolicy =
 export interface ContextManagerOptions {
   writePolicy?: WritePolicy
   fallbackOnUndefined?: boolean
+  plugins?: Plugin<any>[]
+  devtools?: boolean
 }
 
 export interface SubscribeOptions {
@@ -24,18 +27,34 @@ export class ContextManager {
   private parents = new Map<ScopeId, ScopeId>()
   private writePolicy: WritePolicy
   private fallbackOnUndefined: boolean
+  private plugins: Plugin<any>[]
+  private devtools: boolean
 
   constructor(options: ContextManagerOptions = {}) {
     this.writePolicy = options.writePolicy ?? 'self'
     this.fallbackOnUndefined = options.fallbackOnUndefined ?? true
+    this.plugins = options.plugins ?? []
+    this.devtools = options.devtools ?? false
   }
 
   createContext(
     scopeId: ScopeId,
     initial: Record<string, any> = {},
-    parentScopeId?: ScopeId
+    parentScopeId?: ScopeId,
+    options: { plugins?: Plugin<any>[] } = {}
   ) {
-    const store = createCoreStore<Record<string, any>>(initial)
+    const plugins = [...this.plugins, ...(options.plugins ?? [])]
+
+    if (this.devtools) {
+      // 优化：优先使用 Symbol 的 description，否则使用 String 转换
+      const displayName = typeof scopeId === 'symbol' 
+        ? (scopeId.description || String(scopeId)) 
+        : String(scopeId)
+      
+      plugins.push(devtoolsPlugin({ name: displayName }))
+    }
+
+    const store = createStore<Record<string, any>>(initial, { plugins })
     this.contexts.set(scopeId, store)
     if (parentScopeId) this.parents.set(scopeId, parentScopeId)
     return store
