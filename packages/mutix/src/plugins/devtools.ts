@@ -1,6 +1,6 @@
 import type { Plugin, PluginContext, Store } from '../types'
 
-interface DevToolsOptions {
+export interface DevToolsOptions {
   name?: string
   enabled?: boolean
 }

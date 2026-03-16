@@ -20,3 +20,37 @@ export * from './adapter'
 
 // Built-in Adapters (implementations)
 export * from './adapters'
+
+import { createStore, createCoreStore } from './store'
+import {
+  ContextManager,
+  createContext,
+  destroyContext,
+  getValue,
+  setValue,
+  deleteValue,
+  subscribeValue,
+  getStore
+} from './context/manager'
+import { attachLogger, loggerPlugin } from './plugins/logger'
+import { attachDevTools, devtoolsPlugin } from './plugins/devtools'
+
+// Keep named exports unchanged while adding default export compatibility.
+const mutix = {
+  createStore,
+  createCoreStore,
+  ContextManager,
+  createContext,
+  destroyContext,
+  getValue,
+  setValue,
+  deleteValue,
+  subscribeValue,
+  getStore,
+  attachLogger,
+  loggerPlugin,
+  attachDevTools,
+  devtoolsPlugin
+}
+
+export default mutix
